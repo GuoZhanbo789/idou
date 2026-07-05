@@ -220,6 +220,8 @@ async function loadCloudState() {
       state.colors = colors.map(parseColor);
       state.ledger = ledger.map(parseLedger);
       state.consumptions = consumptions.map(parseConsumption);
+    } else {
+      rekeyStateForNewCloudUser();
     }
 
     cloudReady = true;
@@ -397,6 +399,24 @@ function parseConsumption(item) {
     date: item.date || today,
     project: item.project || "",
   };
+}
+
+function rekeyStateForNewCloudUser() {
+  const colorIdMap = new Map();
+  state.colors = state.colors.map((item) => {
+    const id = crypto.randomUUID();
+    colorIdMap.set(item.id, id);
+    return { ...item, id };
+  });
+  state.works = state.works.map((item) => ({ ...item, id: crypto.randomUUID() }));
+  state.products = state.products.map((item) => ({ ...item, id: crypto.randomUUID() }));
+  state.ledger = state.ledger.map((item) => ({ ...item, id: crypto.randomUUID() }));
+  state.consumptions = state.consumptions.map((item) => ({
+    ...item,
+    id: crypto.randomUUID(),
+    colorId: colorIdMap.get(item.colorId) || "",
+  }));
+  saveState();
 }
 
 async function uploadWorkImage(file) {

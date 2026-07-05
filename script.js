@@ -10,7 +10,7 @@ const SUPABASE_URL = "https://uazlxbjveudparqqkhxn.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_EBF9jUq9jqg7dGrnu3ftDQ_33nXUgow";
 const SUPABASE_STORAGE_BUCKET = "work-images";
 const SITE_REDIRECT_URL = `${window.location.origin}${window.location.pathname}`;
-const PIECES_PER_KG = 16000;
+const PIECES_PER_GRAM = 100;
 const supabaseReady = SUPABASE_URL.startsWith("https://")
   && (SUPABASE_ANON_KEY.startsWith("ey") || SUPABASE_ANON_KEY.startsWith("sb_publishable_"))
   && window.supabase;
@@ -761,19 +761,23 @@ function sumLedger(type, date = "") {
 
 function formatStock(value) {
   const amount = Number(value || 0);
-  if (els.stockUnit?.value === "kg") {
-    return `${(amount / PIECES_PER_KG).toFixed(3).replace(/0+$/, "").replace(/\.$/, "")} kg`;
+  if (els.stockUnit?.value === "g") {
+    return `${(amount / PIECES_PER_GRAM).toFixed(1).replace(/\.0$/, "")} g`;
   }
   return `${Math.round(amount)} 颗`;
 }
 
 function parseStockValue(value) {
   const raw = String(value || "").trim().toLowerCase();
-  const number = Number(raw.replace(/kg|公斤|千克|颗|粒|pcs|pieces|,/g, "").trim());
+  const number = Number(raw.replace(/kg|公斤|千克|g|克|颗|粒|pcs|pieces|,/g, "").trim());
   if (!Number.isFinite(number)) return 0;
-  return raw.includes("kg") || raw.includes("公斤") || raw.includes("千克")
-    ? Math.round(number * PIECES_PER_KG)
-    : Math.round(number);
+  if (raw.includes("kg") || raw.includes("公斤") || raw.includes("千克")) {
+    return Math.round(number * 1000 * PIECES_PER_GRAM);
+  }
+  if (raw.includes("g") || raw.includes("克")) {
+    return Math.round(number * PIECES_PER_GRAM);
+  }
+  return Math.round(number);
 }
 
 function parseColorImport(text) {
@@ -796,7 +800,7 @@ function parseColorLine(line) {
   const colorToken = tokens.find((token) => /^#?[0-9a-f]{6}$/i.test(token));
   const code = colorToken ? normalizeHex(colorToken) : "#b98d43";
   const remaining = tokens.filter((token) => token !== colorToken);
-  const numericTokens = remaining.filter((token) => /^\d+(\.\d+)?\s*(kg|公斤|千克|颗|粒|pcs|pieces)?$/i.test(token));
+  const numericTokens = remaining.filter((token) => /^\d+(\.\d+)?\s*(kg|公斤|千克|g|克|颗|粒|pcs|pieces)?$/i.test(token));
   const textTokens = remaining.filter((token) => !numericTokens.includes(token));
   const stock = parseStockValue(numericTokens[0] || 0);
   const min = parseStockValue(numericTokens[1] || Math.max(100, Math.round(stock * 0.25)));

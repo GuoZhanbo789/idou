@@ -154,7 +154,7 @@
           <div class="inventory-controls">
             <select id="stockUnit" aria-label="库存单位">
               <option value="pieces">颗</option>
-              <option value="kg">kg</option>
+              <option value="g">g</option>
             </select>
             <button class="ghost-button" id="importColors">导入颜色表</button>
             <button class="icon-button" id="addColor" title="新增颜色" aria-label="新增颜色">+</button>
@@ -303,8 +303,8 @@
     <dialog id="importDialog">
       <form method="dialog" class="dialog-card import-dialog-card" id="importForm">
         <h3>导入颜色库存</h3>
-        <p>从表格复制后直接粘贴。支持格式：颜色名称、颜色编号、色值、库存、安全线。库存可写“1200”或“0.08kg”。</p>
-        <textarea id="importText" placeholder="奶油白, C001, #f6efe2, 1260, 400&#10;摩卡棕, C018, #7b5a43, 520, 350&#10;海盐蓝, C042, #5f87a7, 0.04kg, 300"></textarea>
+        <p>从表格复制后直接粘贴。支持格式：颜色名称、颜色编号、色值、库存、安全线。库存可写“1200”或“8g”。</p>
+        <textarea id="importText" placeholder="奶油白, C001, #f6efe2, 1260, 400&#10;摩卡棕, C018, #7b5a43, 520, 350&#10;海盐蓝, C042, #5f87a7, 4g, 300"></textarea>
         <small>如果没有色值，会先用默认金色，你之后可以编辑颜色。</small>
         <menu>
           <button type="button" value="cancel" class="ghost" id="closeImport">取消</button>

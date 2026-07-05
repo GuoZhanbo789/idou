@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>iDOU Handcraft Studio · Demo</title>
+    <link rel="stylesheet" href="./demo.css" />
+  </head>
+  <body>
+    <main class="demo-shell">
+      <section class="demo-header">
+        <div>
+          <p>iDOU Handcraft Studio</p>
+          <h1>动态产品演示</h1>
+        </div>
+        <div class="demo-controls">
+          <button id="replayDemo">重新播放</button>
+          <a href="./index.html">进入网站</a>
+        </div>
+      </section>
+
+      <section class="cinema">
+        <div class="stage">
+          <iframe id="siteFrame" src="./index.html#/home" title="iDOU Handcraft Studio 网站演示"></iframe>
+          <div class="scanline" aria-hidden="true"></div>
+          <div class="cursor" id="cursor" aria-hidden="true"></div>
+          <div class="click-ring" id="clickRing" aria-hidden="true"></div>
+          <div class="focus-frame" id="focusFrame" aria-hidden="true"></div>
+        </div>
+        <aside class="caption-card">
+          <span id="stepCount">01 / 08</span>
+          <h2 id="captionTitle">品牌首页</h2>
+          <p id="captionText">镜头进入 iDOU Handcraft Studio，展示动态首页和经营看板。</p>
+          <div class="progress"><span id="progressBar"></span></div>
+        </aside>
+      </section>
+
+      <section class="chapter-strip" id="chapterStrip"></section>
+    </main>
+
+    <script src="./demo.js"></script>
+  </body>
+</html>

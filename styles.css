@@ -876,6 +876,10 @@ dialog menu .ghost {
   font-size: 12px;
 }
 
+.consumption-item {
+  grid-template-columns: 1fr auto auto;
+}
+
 .summary-bar {
   grid-column: 1 / -1;
   height: 7px;

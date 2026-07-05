@@ -565,12 +565,13 @@ function renderColors() {
 
   els.consumptionList.innerHTML = state.consumptions.length
     ? state.consumptions.slice(0, 8).map((item, index) => `
-      <article class="summary-item" style="--stagger:${index}">
+      <article class="summary-item consumption-item" style="--stagger:${index}">
         <div>
           <strong>${escapeHtml(item.colorName)}</strong>
           <small>${item.date} · ${escapeHtml(item.project || "未填写用途")}</small>
         </div>
         <span>${Number(item.amount)} 颗</span>
+        <button class="row-button" data-action="delete-consumption" data-id="${item.id}" title="删除消耗记录">×</button>
       </article>
     `).join("")
     : emptySummary("还没有记录拼豆消耗");
@@ -925,36 +926,38 @@ document.querySelector("#consumeColor").addEventListener("click", () => {
   openEditor("consume", {});
 });
 
-els.importColors.addEventListener("click", () => {
-  els.importText.value = "";
-  els.importDialog.showModal();
-});
-
-els.closeImport.addEventListener("click", () => els.importDialog.close());
-
-els.importForm.addEventListener("submit", () => {
-  const imported = parseColorImport(els.importText.value);
-  if (!imported.length) {
-    alert("没有识别到颜色数据。请按：名称、编号、色值、库存、安全线 的格式粘贴。");
-    return;
-  }
-  imported.forEach((entry) => {
-    const existing = state.colors.find((item) => {
-      const sameNumber = entry.number && item.number && item.number.toLowerCase() === entry.number.toLowerCase();
-      const sameName = item.name.trim().toLowerCase() === entry.name.trim().toLowerCase();
-      return sameNumber || sameName;
-    });
-    if (existing) Object.assign(existing, entry);
-    else state.colors.push({ id: crypto.randomUUID(), ...entry });
+if (els.importColors && els.importDialog && els.importForm && els.importText && els.closeImport) {
+  els.importColors.addEventListener("click", () => {
+    els.importText.value = "";
+    els.importDialog.showModal();
   });
-  els.importDialog.close();
-  render();
-  alert(`已导入/更新 ${imported.length} 个颜色。`);
-});
+
+  els.closeImport.addEventListener("click", () => els.importDialog.close());
+
+  els.importForm.addEventListener("submit", () => {
+    const imported = parseColorImport(els.importText.value);
+    if (!imported.length) {
+      alert("没有识别到颜色数据。请按：名称、编号、色值、库存、安全线 的格式粘贴。");
+      return;
+    }
+    imported.forEach((entry) => {
+      const existing = state.colors.find((item) => {
+        const sameNumber = entry.number && item.number && item.number.toLowerCase() === entry.number.toLowerCase();
+        const sameName = item.name.trim().toLowerCase() === entry.name.trim().toLowerCase();
+        return sameNumber || sameName;
+      });
+      if (existing) Object.assign(existing, entry);
+      else state.colors.push({ id: crypto.randomUUID(), ...entry });
+    });
+    els.importDialog.close();
+    render();
+    alert(`已导入/更新 ${imported.length} 个颜色。`);
+  });
+}
 
 els.workSearch.addEventListener("input", renderWorks);
 els.workFilter.addEventListener("change", renderWorks);
-els.stockUnit.addEventListener("change", () => {
+els.stockUnit?.addEventListener("change", () => {
   renderColors();
   renderSummary();
 });
@@ -1004,6 +1007,14 @@ document.body.addEventListener("click", (event) => {
   if (action === "delete-color") state.colors = state.colors.filter((item) => item.id !== id);
   if (action === "delete-work") state.works = state.works.filter((item) => item.id !== id);
   if (action === "delete-ledger") state.ledger = state.ledger.filter((item) => item.id !== id);
+  if (action === "delete-consumption") {
+    const record = state.consumptions.find((item) => item.id === id);
+    if (record) {
+      const color = state.colors.find((item) => item.id === record.colorId || item.name === record.colorName);
+      if (color) color.stock = Number(color.stock || 0) + Number(record.amount || 0);
+      state.consumptions = state.consumptions.filter((item) => item.id !== id);
+    }
+  }
   render();
 });
 

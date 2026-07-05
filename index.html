@@ -29,6 +29,11 @@
         <a href="#/finance" data-route="finance">财务</a>
         <a href="#/summary" data-route="summary">总结</a>
       </nav>
+      <div class="auth-actions">
+        <span id="syncStatus">本地模式</span>
+        <button type="button" id="loginButton">登录同步</button>
+        <button type="button" id="logoutButton" hidden>退出</button>
+      </div>
     </header>
 
     <main>
@@ -146,7 +151,14 @@
             <h1>拼豆颜色库存</h1>
             <p>每种颜色都有安全库存线，低于最低值会进入补货提醒。可记录一次制作消耗。</p>
           </div>
-          <button class="icon-button" id="addColor" title="新增颜色" aria-label="新增颜色">+</button>
+          <div class="inventory-controls">
+            <select id="stockUnit" aria-label="库存单位">
+              <option value="pieces">颗</option>
+              <option value="kg">kg</option>
+            </select>
+            <button class="ghost-button" id="importColors">导入颜色表</button>
+            <button class="icon-button" id="addColor" title="新增颜色" aria-label="新增颜色">+</button>
+          </div>
         </div>
         <div class="split">
           <div class="panel">
@@ -155,7 +167,9 @@
                 <p class="eyebrow">Color Stock</p>
                 <h2>颜色列表</h2>
               </div>
-              <button class="ghost-button" id="consumeColor">记录消耗</button>
+              <div class="head-actions">
+                <button class="ghost-button" id="consumeColor">记录消耗</button>
+              </div>
             </div>
             <div class="color-list" id="colorList"></div>
           </div>
@@ -271,6 +285,35 @@
       </form>
     </dialog>
 
+    <dialog id="authDialog">
+      <form class="dialog-card auth-dialog-card" id="authForm">
+        <h3>登录云同步</h3>
+        <p>登录后，作品、库存、账本和总结会保存到 Supabase，换设备也能继续使用。</p>
+        <input id="authEmail" type="email" autocomplete="email" placeholder="邮箱" required />
+        <input id="authPassword" type="password" autocomplete="current-password" minlength="6" placeholder="密码（至少 6 位）" required />
+        <small id="authMessage"></small>
+        <menu>
+          <button type="button" value="cancel" class="ghost" id="closeAuth">取消</button>
+          <button type="button" class="ghost" id="signupButton">注册</button>
+          <button type="submit" value="default">登录</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="importDialog">
+      <form method="dialog" class="dialog-card import-dialog-card" id="importForm">
+        <h3>导入颜色库存</h3>
+        <p>从表格复制后直接粘贴。支持格式：颜色名称、颜色编号、色值、库存、安全线。库存可写“1200”或“0.08kg”。</p>
+        <textarea id="importText" placeholder="奶油白, C001, #f6efe2, 1260, 400&#10;摩卡棕, C018, #7b5a43, 520, 350&#10;海盐蓝, C042, #5f87a7, 0.04kg, 300"></textarea>
+        <small>如果没有色值，会先用默认金色，你之后可以编辑颜色。</small>
+        <menu>
+          <button type="button" value="cancel" class="ghost" id="closeImport">取消</button>
+          <button type="submit" value="default">导入</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="./script.js"></script>
   </body>
 </html>

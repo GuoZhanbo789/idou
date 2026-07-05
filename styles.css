@@ -220,6 +220,40 @@ label.upload-button {
   transform: scaleX(1);
 }
 
+.auth-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.auth-actions span {
+  max-width: 138px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auth-actions button {
+  min-height: 34px;
+  border: 1px solid rgba(29, 25, 20, 0.12);
+  background: rgba(255, 250, 240, 0.62);
+  color: var(--ink);
+  cursor: pointer;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 900;
+  transition: transform 260ms var(--ease-out), background 260ms ease, border-color 260ms ease;
+}
+
+.auth-actions button:hover {
+  border-color: rgba(185, 141, 67, 0.42);
+  background: rgba(255, 250, 240, 0.94);
+  transform: translateY(-1px);
+}
+
 .page {
   display: none;
   min-height: calc(100vh - 118px);
@@ -765,6 +799,22 @@ dialog menu .ghost {
   gap: 10px;
 }
 
+.inventory-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.inventory-controls select {
+  min-height: 46px;
+  border: 1px solid var(--line);
+  background: rgba(255, 250, 240, 0.72);
+  color: var(--ink);
+  padding: 0 12px;
+  font-weight: 850;
+}
+
 .summary-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
@@ -1185,6 +1235,10 @@ dialog {
   background: transparent;
 }
 
+#importDialog {
+  width: min(760px, calc(100% - 32px));
+}
+
 dialog[open] {
   animation: dialogIn 420ms var(--ease-out) both;
 }
@@ -1210,6 +1264,37 @@ dialog::backdrop {
 .dialog-card h3 {
   margin: 0 0 16px;
   font-size: 26px;
+}
+
+.auth-dialog-card {
+  display: grid;
+  gap: 12px;
+}
+
+.import-dialog-card {
+  display: grid;
+  gap: 12px;
+}
+
+.auth-dialog-card p,
+.auth-dialog-card small,
+.import-dialog-card p,
+.import-dialog-card small {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.auth-dialog-card small,
+.import-dialog-card small {
+  min-height: 20px;
+  font-size: 12px;
+}
+
+.import-dialog-card textarea {
+  min-height: 260px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  line-height: 1.6;
 }
 
 #dialogFields {
@@ -1241,6 +1326,11 @@ dialog menu .ghost {
     overflow-x: auto;
   }
 
+  .auth-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
   .hero {
     min-height: 92vh;
     padding-top: 164px;
@@ -1261,6 +1351,7 @@ dialog menu .ghost {
   .split,
   .summary-layout,
   .summary-controls,
+  .inventory-controls,
   .ledger-form,
   .toolbar {
     grid-template-columns: 1fr;

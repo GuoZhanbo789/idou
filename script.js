@@ -6,6 +6,16 @@ const currency = new Intl.NumberFormat("zh-CN", {
 
 const today = new Date().toISOString().slice(0, 10);
 
+const SUPABASE_URL = "https://uazlxbjveudparqqkhxn.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_EBF9jUq9jqg7dGrnu3ftDQ_33nXUgow";
+const SUPABASE_STORAGE_BUCKET = "work-images";
+const SITE_REDIRECT_URL = `${window.location.origin}${window.location.pathname}`;
+const PIECES_PER_KG = 16000;
+const supabaseReady = SUPABASE_URL.startsWith("https://")
+  && (SUPABASE_ANON_KEY.startsWith("ey") || SUPABASE_ANON_KEY.startsWith("sb_publishable_"))
+  && window.supabase;
+const supabaseClient = supabaseReady ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
 const defaults = {
   works: [
     {
@@ -46,12 +56,12 @@ const defaults = {
     { id: crypto.randomUUID(), name: "节日礼盒套装", category: "礼盒", price: 168, cost: 62, stock: 6, status: "新品" },
   ],
   colors: [
-    { id: crypto.randomUUID(), name: "奶油白", code: "#f6efe2", stock: 1260, min: 400 },
-    { id: crypto.randomUUID(), name: "摩卡棕", code: "#7b5a43", stock: 520, min: 350 },
-    { id: crypto.randomUUID(), name: "樱桃红", code: "#c9453d", stock: 280, min: 320 },
-    { id: crypto.randomUUID(), name: "海盐蓝", code: "#5f87a7", stock: 760, min: 300 },
-    { id: crypto.randomUUID(), name: "抹茶绿", code: "#7e966d", stock: 210, min: 300 },
-    { id: crypto.randomUUID(), name: "琥珀黄", code: "#d8a33d", stock: 430, min: 280 },
+    { id: crypto.randomUUID(), number: "C001", name: "奶油白", code: "#f6efe2", stock: 1260, min: 400 },
+    { id: crypto.randomUUID(), number: "C018", name: "摩卡棕", code: "#7b5a43", stock: 520, min: 350 },
+    { id: crypto.randomUUID(), number: "C026", name: "樱桃红", code: "#c9453d", stock: 280, min: 320 },
+    { id: crypto.randomUUID(), number: "C042", name: "海盐蓝", code: "#5f87a7", stock: 760, min: 300 },
+    { id: crypto.randomUUID(), number: "C053", name: "抹茶绿", code: "#7e966d", stock: 210, min: 300 },
+    { id: crypto.randomUUID(), number: "C071", name: "琥珀黄", code: "#d8a33d", stock: 430, min: 280 },
   ],
   ledger: [
     { id: crypto.randomUUID(), type: "income", name: "头像定制订单", amount: 256, date: today },
@@ -90,6 +100,12 @@ const els = {
   colorList: document.querySelector("#colorList"),
   restockList: document.querySelector("#restockList"),
   consumptionList: document.querySelector("#consumptionList"),
+  stockUnit: document.querySelector("#stockUnit"),
+  importColors: document.querySelector("#importColors"),
+  importDialog: document.querySelector("#importDialog"),
+  importForm: document.querySelector("#importForm"),
+  importText: document.querySelector("#importText"),
+  closeImport: document.querySelector("#closeImport"),
   ledgerList: document.querySelector("#ledgerList"),
   ledgerForm: document.querySelector("#ledgerForm"),
   ledgerDate: document.querySelector("#ledgerDate"),
@@ -102,10 +118,25 @@ const els = {
   dialogTitle: document.querySelector("#dialogTitle"),
   dialogFields: document.querySelector("#dialogFields"),
   closeDialog: document.querySelector("#closeDialog"),
+  authDialog: document.querySelector("#authDialog"),
+  authForm: document.querySelector("#authForm"),
+  authEmail: document.querySelector("#authEmail"),
+  authPassword: document.querySelector("#authPassword"),
+  authMessage: document.querySelector("#authMessage"),
+  loginButton: document.querySelector("#loginButton"),
+  logoutButton: document.querySelector("#logoutButton"),
+  signupButton: document.querySelector("#signupButton"),
+  closeAuth: document.querySelector("#closeAuth"),
+  syncStatus: document.querySelector("#syncStatus"),
 };
 
 let editContext = null;
 let dragId = null;
+let cloudUser = null;
+let cloudReady = false;
+let loadingCloud = false;
+let cloudSaveTimer = null;
+let lastCloudError = "";
 els.ledgerDate.value = today;
 els.summaryDay.value = today;
 els.summaryMonth.value = today.slice(0, 7);
@@ -135,6 +166,252 @@ function saveState() {
   localStorage.setItem("idou-studio-state-v2", JSON.stringify(state));
 }
 
+function updateSyncStatus(text = "") {
+  if (!els.syncStatus) return;
+  const label = text || (cloudUser ? `云同步 · ${cloudUser.email}` : supabaseReady ? "未登录" : "本地模式");
+  els.syncStatus.textContent = label;
+  els.loginButton.hidden = Boolean(cloudUser);
+  els.logoutButton.hidden = !cloudUser;
+}
+
+function queueCloudSave() {
+  if (!cloudReady || loadingCloud || !cloudUser) return;
+  clearTimeout(cloudSaveTimer);
+  cloudSaveTimer = setTimeout(saveCloudState, 520);
+}
+
+async function initCloud() {
+  updateSyncStatus();
+  if (!supabaseClient) return;
+
+  const { data } = await supabaseClient.auth.getSession();
+  if (data.session?.user) {
+    cloudUser = data.session.user;
+    await loadCloudState();
+  }
+
+  supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+    cloudUser = session?.user || null;
+    cloudReady = Boolean(cloudUser);
+    updateSyncStatus(cloudUser ? "正在同步..." : "未登录");
+    if (cloudUser) await loadCloudState();
+    else render();
+  });
+}
+
+async function loadCloudState() {
+  if (!supabaseClient || !cloudUser) return;
+  loadingCloud = true;
+  updateSyncStatus("正在加载云端...");
+
+  try {
+    const [works, products, colors, ledger, consumptions] = await Promise.all([
+      selectCloudTable("works", "sort_order"),
+      selectCloudTable("products", "created_at"),
+      selectCloudTable("colors", "created_at"),
+      selectCloudTable("ledger", "date"),
+      selectCloudTable("consumptions", "date"),
+    ]);
+
+    const hasCloudData = [works, products, colors, ledger, consumptions].some((rows) => rows.length);
+    if (hasCloudData) {
+      state.works = works.map(parseWork);
+      state.products = products.map(parseProduct);
+      state.colors = colors.map(parseColor);
+      state.ledger = ledger.map(parseLedger);
+      state.consumptions = consumptions.map(parseConsumption);
+    }
+
+    cloudReady = true;
+    updateSyncStatus(hasCloudData ? "云端已加载" : "云端已初始化");
+  } catch (error) {
+    cloudReady = false;
+    updateSyncStatus("云同步失败");
+    console.error(error);
+    alert(`Supabase 同步失败：${error.message}`);
+  } finally {
+    loadingCloud = false;
+    render();
+  }
+}
+
+async function selectCloudTable(table, orderColumn) {
+  let query = supabaseClient.from(table).select("*").eq("user_id", cloudUser.id);
+  if (orderColumn) query = query.order(orderColumn, { ascending: table === "works" });
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
+}
+
+async function saveCloudState() {
+  if (!supabaseClient || !cloudUser || loadingCloud) return;
+  updateSyncStatus("正在保存...");
+  try {
+    await Promise.all([
+      replaceCloudTable("works", state.works.map(serializeWork)),
+      replaceCloudTable("products", state.products.map(serializeProduct)),
+      replaceCloudTable("colors", state.colors.map(serializeColor)),
+      replaceCloudTable("ledger", state.ledger.map(serializeLedger)),
+      replaceCloudTable("consumptions", state.consumptions.map(serializeConsumption)),
+    ]);
+    updateSyncStatus("已同步");
+    lastCloudError = "";
+  } catch (error) {
+    updateSyncStatus("保存失败");
+    console.error(error);
+    if (error.message !== lastCloudError) {
+      lastCloudError = error.message;
+      alert(`保存到 Supabase 失败：${error.message}`);
+    }
+  }
+}
+
+async function replaceCloudTable(table, rows) {
+  if (rows.length) {
+    const saved = await supabaseClient.from(table).upsert(rows, { onConflict: "id" });
+    if (saved.error) throw saved.error;
+  }
+
+  const deleteQuery = supabaseClient.from(table).delete().eq("user_id", cloudUser.id);
+  const deleted = rows.length
+    ? await deleteQuery.not("id", "in", `(${rows.map((row) => row.id).join(",")})`)
+    : await deleteQuery;
+  if (deleted.error) throw deleted.error;
+}
+
+function serializeWork(item, index) {
+  return {
+    id: item.id,
+    user_id: cloudUser.id,
+    title: item.title,
+    category: item.category,
+    price: Number(item.price || 0),
+    status: item.status,
+    note: item.note || "",
+    image_url: item.image || "",
+    palette: item.palette || [],
+    sort_order: index,
+  };
+}
+
+function serializeProduct(item) {
+  return {
+    id: item.id,
+    user_id: cloudUser.id,
+    name: item.name,
+    category: item.category,
+    price: Number(item.price || 0),
+    cost: Number(item.cost || 0),
+    stock: Number(item.stock || 0),
+    status: item.status,
+  };
+}
+
+function serializeColor(item) {
+  return {
+    id: item.id,
+    user_id: cloudUser.id,
+    number: item.number || "",
+    name: item.name,
+    code: item.code,
+    stock: Number(item.stock || 0),
+    min: Number(item.min || 0),
+  };
+}
+
+function serializeLedger(item) {
+  return {
+    id: item.id,
+    user_id: cloudUser.id,
+    type: item.type,
+    name: item.name,
+    amount: Number(item.amount || 0),
+    date: item.date || today,
+  };
+}
+
+function serializeConsumption(item) {
+  return {
+    id: item.id,
+    user_id: cloudUser.id,
+    color_id: item.colorId || null,
+    color_name: item.colorName,
+    amount: Number(item.amount || 0),
+    date: item.date || today,
+    project: item.project || "",
+  };
+}
+
+function parseWork(item) {
+  return {
+    id: item.id,
+    title: item.title,
+    category: item.category,
+    price: Number(item.price || 0),
+    status: item.status,
+    note: item.note || "",
+    image: item.image_url || "",
+    palette: item.palette || ["#b98d43", "#f2ddbd"],
+  };
+}
+
+function parseProduct(item) {
+  return {
+    id: item.id,
+    name: item.name,
+    category: item.category,
+    price: Number(item.price || 0),
+    cost: Number(item.cost || 0),
+    stock: Number(item.stock || 0),
+    status: item.status,
+  };
+}
+
+function parseColor(item) {
+  return {
+    id: item.id,
+    number: item.number || "",
+    name: item.name,
+    code: item.code,
+    stock: Number(item.stock || 0),
+    min: Number(item.min || 0),
+  };
+}
+
+function parseLedger(item) {
+  return {
+    id: item.id,
+    type: item.type,
+    name: item.name,
+    amount: Number(item.amount || 0),
+    date: item.date || today,
+  };
+}
+
+function parseConsumption(item) {
+  return {
+    id: item.id,
+    colorId: item.color_id || "",
+    colorName: item.color_name,
+    amount: Number(item.amount || 0),
+    date: item.date || today,
+    project: item.project || "",
+  };
+}
+
+async function uploadWorkImage(file) {
+  if (!supabaseClient || !cloudUser) return readImageFile(file);
+  const safeName = file.name.replace(/[^\w.-]+/g, "-").toLowerCase();
+  const path = `${cloudUser.id}/${crypto.randomUUID()}-${safeName}`;
+  const { error } = await supabaseClient.storage.from(SUPABASE_STORAGE_BUCKET).upload(path, file, {
+    cacheControl: "3600",
+    upsert: false,
+  });
+  if (error) throw error;
+  const { data } = supabaseClient.storage.from(SUPABASE_STORAGE_BUCKET).getPublicUrl(path);
+  return { name: file.name, image: data.publicUrl };
+}
+
 function route() {
   const page = location.hash.replace("#/", "") || "home";
   const validPage = [...els.pages].some((node) => node.dataset.page === page) ? page : "home";
@@ -155,6 +432,7 @@ function render() {
   renderSummary();
   requestAnimationFrame(prepareMotion);
   saveState();
+  queueCloudSave();
 }
 
 function renderMetrics() {
@@ -263,9 +541,9 @@ function renderColors() {
         <span class="swatch" style="background:${item.code}"></span>
         <div>
           <div class="color-name">${escapeHtml(item.name)}</div>
-          <div class="muted">${escapeHtml(item.code)} · 最低 ${Number(item.min)} 颗</div>
+          <div class="muted">${escapeHtml(item.number || "未编号")} · ${escapeHtml(item.code)} · 最低 ${formatStock(item.min)}</div>
         </div>
-        <div class="stock-pill ${low ? "low" : ""}">${Number(item.stock)} 颗</div>
+        <div class="stock-pill ${low ? "low" : ""}">${formatStock(item.stock)}</div>
         <div class="row-actions">
           <button class="row-button" data-action="edit-color" data-id="${item.id}" title="编辑">✎</button>
           <button class="row-button" data-action="delete-color" data-id="${item.id}" title="删除">×</button>
@@ -280,7 +558,7 @@ function renderColors() {
     return `
       <article class="restock-item" style="--stagger:${index}">
         <div class="color-name">${escapeHtml(item.name)}</div>
-        <div class="muted">${need ? `建议补货 ${need} 颗以上` : "库存稳定，可作为常用色"}</div>
+        <div class="muted">${need ? `建议补货 ${formatStock(need)} 以上` : "库存稳定，可作为常用色"}</div>
       </article>
     `;
   }).join("");
@@ -417,7 +695,7 @@ function renderStockSummary(productValue, lowColors) {
   const beadCount = state.colors.reduce((sum, item) => sum + Number(item.stock), 0);
   const rows = [
     { name: "成品库存", value: `${stockCount} 件`, note: `估值 ${currency.format(productValue)}` },
-    { name: "拼豆库存", value: `${beadCount} 颗`, note: `${state.colors.length} 个颜色` },
+    { name: "拼豆库存", value: formatStock(beadCount), note: `${state.colors.length} 个颜色` },
     { name: "低库存颜色", value: `${lowColors.length} 个`, note: lowColors.length ? lowColors.map((item) => item.name).slice(0, 4).join("、") : "暂无预警" },
     { name: "作品库", value: `${state.works.length} 件`, note: "用于展示和内容发布" },
   ];
@@ -454,6 +732,65 @@ function sumLedger(type, date = "") {
     .reduce((sum, item) => sum + Number(item.amount), 0);
 }
 
+function formatStock(value) {
+  const amount = Number(value || 0);
+  if (els.stockUnit?.value === "kg") {
+    return `${(amount / PIECES_PER_KG).toFixed(3).replace(/0+$/, "").replace(/\.$/, "")} kg`;
+  }
+  return `${Math.round(amount)} 颗`;
+}
+
+function parseStockValue(value) {
+  const raw = String(value || "").trim().toLowerCase();
+  const number = Number(raw.replace(/kg|公斤|千克|颗|粒|pcs|pieces|,/g, "").trim());
+  if (!Number.isFinite(number)) return 0;
+  return raw.includes("kg") || raw.includes("公斤") || raw.includes("千克")
+    ? Math.round(number * PIECES_PER_KG)
+    : Math.round(number);
+}
+
+function parseColorImport(text) {
+  return String(text || "")
+    .split(/\r?\n/)
+    .map((line) => parseColorLine(line))
+    .filter(Boolean);
+}
+
+function parseColorLine(line) {
+  const clean = String(line || "").trim();
+  if (!clean || /^(颜色)?名称[\s,，\t]+/.test(clean) || /color\s*name/i.test(clean)) return null;
+  const parts = clean
+    .split(/\t|,|，|;|；/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const tokens = parts.length > 1 ? parts : clean.split(/\s+/).map((part) => part.trim()).filter(Boolean);
+  if (!tokens.length) return null;
+
+  const colorToken = tokens.find((token) => /^#?[0-9a-f]{6}$/i.test(token));
+  const code = colorToken ? normalizeHex(colorToken) : "#b98d43";
+  const remaining = tokens.filter((token) => token !== colorToken);
+  const numericTokens = remaining.filter((token) => /^\d+(\.\d+)?\s*(kg|公斤|千克|颗|粒|pcs|pieces)?$/i.test(token));
+  const textTokens = remaining.filter((token) => !numericTokens.includes(token));
+  const stock = parseStockValue(numericTokens[0] || 0);
+  const min = parseStockValue(numericTokens[1] || Math.max(100, Math.round(stock * 0.25)));
+  const numberIndex = textTokens.findIndex((token) => /[a-z]*\d+/i.test(token) && token.length <= 18);
+  const number = numberIndex >= 0 ? textTokens[numberIndex] : "";
+  const name = textTokens.filter((_, index) => index !== numberIndex).join(" ") || number || "未命名颜色";
+
+  return {
+    number,
+    name,
+    code,
+    stock,
+    min,
+  };
+}
+
+function normalizeHex(value) {
+  const hex = String(value || "").trim();
+  return hex.startsWith("#") ? hex : `#${hex}`;
+}
+
 function openEditor(kind, item) {
   editContext = { kind, id: item.id };
   const titles = { product: "编辑产品", color: "编辑颜色", work: "编辑作品", consume: "记录拼豆消耗" };
@@ -478,6 +815,7 @@ function productFields(item) {
 
 function colorFields(item) {
   return `
+    <input name="number" value="${escapeAttr(item.number || "")}" placeholder="颜色编号，例如 C001 / 01 / Hama-01" />
     <input name="name" value="${escapeAttr(item.name)}" placeholder="颜色名称" required />
     <input name="code" type="color" value="${item.code}" aria-label="颜色" required />
     <input name="stock" type="number" min="0" step="1" value="${item.stock}" placeholder="当前颗数" required />
@@ -500,7 +838,7 @@ function workFields(item) {
 function consumeFields() {
   return `
     <select name="colorId" required>
-      ${state.colors.map((item) => `<option value="${item.id}">${escapeHtml(item.name)} · ${item.stock} 颗</option>`).join("")}
+      ${state.colors.map((item) => `<option value="${item.id}">${escapeHtml(item.name)} · ${formatStock(item.stock)}</option>`).join("")}
     </select>
     <input name="amount" type="number" min="1" step="1" placeholder="消耗颗数" required />
     <input name="project" type="text" placeholder="用途，例如：花束钥匙扣 / 客单定制" />
@@ -569,7 +907,7 @@ document.querySelector("#addProduct").addEventListener("click", () => {
 });
 
 document.querySelector("#addColor").addEventListener("click", () => {
-  const item = { id: crypto.randomUUID(), name: "新颜色", code: "#b98d43", stock: 100, min: 200 };
+  const item = { id: crypto.randomUUID(), number: "", name: "新颜色", code: "#b98d43", stock: 100, min: 200 };
   state.colors.unshift(item);
   openEditor("color", item);
   render();
@@ -587,8 +925,39 @@ document.querySelector("#consumeColor").addEventListener("click", () => {
   openEditor("consume", {});
 });
 
+els.importColors.addEventListener("click", () => {
+  els.importText.value = "";
+  els.importDialog.showModal();
+});
+
+els.closeImport.addEventListener("click", () => els.importDialog.close());
+
+els.importForm.addEventListener("submit", () => {
+  const imported = parseColorImport(els.importText.value);
+  if (!imported.length) {
+    alert("没有识别到颜色数据。请按：名称、编号、色值、库存、安全线 的格式粘贴。");
+    return;
+  }
+  imported.forEach((entry) => {
+    const existing = state.colors.find((item) => {
+      const sameNumber = entry.number && item.number && item.number.toLowerCase() === entry.number.toLowerCase();
+      const sameName = item.name.trim().toLowerCase() === entry.name.trim().toLowerCase();
+      return sameNumber || sameName;
+    });
+    if (existing) Object.assign(existing, entry);
+    else state.colors.push({ id: crypto.randomUUID(), ...entry });
+  });
+  els.importDialog.close();
+  render();
+  alert(`已导入/更新 ${imported.length} 个颜色。`);
+});
+
 els.workSearch.addEventListener("input", renderWorks);
 els.workFilter.addEventListener("change", renderWorks);
+els.stockUnit.addEventListener("change", () => {
+  renderColors();
+  renderSummary();
+});
 els.summaryMode.addEventListener("change", () => {
   els.summaryDay.style.display = els.summaryMode.value === "day" ? "block" : "none";
   els.summaryMonth.style.display = els.summaryMode.value === "month" ? "block" : "none";
@@ -604,10 +973,15 @@ els.summaryYear.style.display = "none";
 
 els.workUpload.addEventListener("change", async (event) => {
   const files = [...event.target.files].filter((file) => file.type.startsWith("image/"));
-  const loaded = await Promise.all(files.map(readImageFile));
-  loaded.forEach(({ name, image }) => state.works.unshift(createWork(name, image)));
-  event.target.value = "";
-  render();
+  try {
+    const loaded = await Promise.all(files.map((file) => cloudReady ? uploadWorkImage(file) : readImageFile(file)));
+    loaded.forEach(({ name, image }) => state.works.unshift(createWork(name, image)));
+    event.target.value = "";
+    render();
+  } catch (error) {
+    console.error(error);
+    alert(`作品图片上传失败：${error.message}`);
+  }
 });
 
 function readImageFile(file) {
@@ -703,6 +1077,51 @@ els.ledgerForm.addEventListener("submit", (event) => {
   render();
 });
 
+els.loginButton.addEventListener("click", () => {
+  if (!supabaseClient) {
+    alert("还没有配置 Supabase。请先把 script.js 顶部的 SUPABASE_URL 和 SUPABASE_ANON_KEY 换成你的项目配置。");
+    return;
+  }
+  els.authMessage.textContent = "";
+  els.authDialog.showModal();
+});
+
+els.closeAuth.addEventListener("click", () => els.authDialog.close());
+
+els.authForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!supabaseClient) return;
+  els.authMessage.textContent = "正在登录...";
+  const { error } = await supabaseClient.auth.signInWithPassword({
+    email: els.authEmail.value.trim(),
+    password: els.authPassword.value,
+  });
+  if (error) {
+    els.authMessage.textContent = `登录失败：${error.message}`;
+    return;
+  }
+  els.authDialog.close();
+});
+
+els.signupButton.addEventListener("click", async () => {
+  if (!supabaseClient) return;
+  els.authMessage.textContent = "正在注册...";
+  const { error } = await supabaseClient.auth.signUp({
+    email: els.authEmail.value.trim(),
+    password: els.authPassword.value,
+    options: {
+      emailRedirectTo: SITE_REDIRECT_URL,
+    },
+  });
+  els.authMessage.textContent = error ? `注册失败：${error.message}` : "注册成功，请按邮箱提示确认后再登录。";
+});
+
+els.logoutButton.addEventListener("click", async () => {
+  if (!supabaseClient) return;
+  await supabaseClient.auth.signOut();
+});
+
 window.addEventListener("hashchange", route);
 route();
 render();
+initCloud();

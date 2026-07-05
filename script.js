@@ -162,6 +162,26 @@ function loadState() {
   };
 }
 
+function blankState() {
+  return {
+    works: [],
+    products: [],
+    colors: [],
+    ledger: [],
+    consumptions: [],
+  };
+}
+
+function resetState(nextState = blankState()) {
+  Object.assign(state, nextState);
+}
+
+function clearLocalStudioData() {
+  localStorage.removeItem("idou-studio-state-v2");
+  resetState();
+  lastCloudError = "";
+}
+
 function saveState() {
   localStorage.setItem("idou-studio-state-v2", JSON.stringify(state));
 }
@@ -195,7 +215,10 @@ async function initCloud() {
     cloudReady = Boolean(cloudUser);
     updateSyncStatus(cloudUser ? "正在同步..." : "未登录");
     if (cloudUser) await loadCloudState();
-    else render();
+    else {
+      clearLocalStudioData();
+      render();
+    }
   });
 }
 
@@ -221,7 +244,8 @@ async function loadCloudState() {
       state.ledger = ledger.map(parseLedger);
       state.consumptions = consumptions.map(parseConsumption);
     } else {
-      rekeyStateForNewCloudUser();
+      resetState();
+      saveState();
     }
 
     cloudReady = true;
@@ -399,24 +423,6 @@ function parseConsumption(item) {
     date: item.date || today,
     project: item.project || "",
   };
-}
-
-function rekeyStateForNewCloudUser() {
-  const colorIdMap = new Map();
-  state.colors = state.colors.map((item) => {
-    const id = crypto.randomUUID();
-    colorIdMap.set(item.id, id);
-    return { ...item, id };
-  });
-  state.works = state.works.map((item) => ({ ...item, id: crypto.randomUUID() }));
-  state.products = state.products.map((item) => ({ ...item, id: crypto.randomUUID() }));
-  state.ledger = state.ledger.map((item) => ({ ...item, id: crypto.randomUUID() }));
-  state.consumptions = state.consumptions.map((item) => ({
-    ...item,
-    id: crypto.randomUUID(),
-    colorId: colorIdMap.get(item.colorId) || "",
-  }));
-  saveState();
 }
 
 async function uploadWorkImage(file) {
@@ -1150,6 +1156,11 @@ els.signupButton.addEventListener("click", async () => {
 els.logoutButton.addEventListener("click", async () => {
   if (!supabaseClient) return;
   await supabaseClient.auth.signOut();
+  cloudUser = null;
+  cloudReady = false;
+  clearLocalStudioData();
+  updateSyncStatus("未登录");
+  render();
 });
 
 window.addEventListener("hashchange", route);

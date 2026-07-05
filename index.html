@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>iDOU Handcraft Studio</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="ambient-scene" aria-hidden="true">
+      <span class="ambient-ring ring-one"></span>
+      <span class="ambient-ring ring-two"></span>
+      <span class="ambient-glow glow-one"></span>
+      <span class="ambient-glow glow-two"></span>
+    </div>
+    <header class="site-header">
+      <a class="brand" href="#/home" aria-label="iDOU Handcraft Studio">
+        <span class="brand-mark">iD</span>
+        <span>
+          <strong>iDOU</strong>
+          <small>Handcraft Studio</small>
+        </span>
+      </a>
+      <nav class="nav" aria-label="主导航">
+        <a href="#/home" data-route="home">主页</a>
+        <a href="#/works" data-route="works">作品</a>
+        <a href="#/products" data-route="products">价格</a>
+        <a href="#/inventory" data-route="inventory">库存</a>
+        <a href="#/finance" data-route="finance">财务</a>
+        <a href="#/summary" data-route="summary">总结</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="page page-home" data-page="home">
+        <div class="hero">
+          <div class="hero-bg-stack" aria-label="拼豆工作室动态背景">
+            <span class="hero-bg bg-one"></span>
+            <span class="hero-bg bg-two"></span>
+            <span class="hero-bg bg-three"></span>
+          </div>
+          <div class="hero-overlay"></div>
+          <div class="bead-orbit" aria-hidden="true">
+            <span style="--i: 0"></span><span style="--i: 1"></span><span style="--i: 2"></span>
+            <span style="--i: 3"></span><span style="--i: 4"></span><span style="--i: 5"></span>
+            <span style="--i: 6"></span><span style="--i: 7"></span><span style="--i: 8"></span>
+          </div>
+          <div class="hero-copy">
+            <p class="eyebrow">Fuse Bead Atelier · Studio Operating System</p>
+            <h1>iDOU Handcraft Studio</h1>
+            <p class="lead">作品展示、拼豆颜色库存、产品定价、订单收支和利润分析都放进一个干净漂亮的网站里。</p>
+            <div class="hero-actions">
+              <a class="primary-action" href="#/works">上传作品</a>
+              <a class="secondary-action" href="#/finance">查看利润</a>
+            </div>
+          </div>
+          <aside class="hero-console">
+            <span>LIVE STUDIO</span>
+            <strong id="heroProfit">¥0</strong>
+            <small>总营业利润</small>
+            <div class="daily-profit">
+              <span>今日营业利润</span>
+              <strong id="heroTodayProfit">¥0</strong>
+            </div>
+          </aside>
+        </div>
+
+        <section class="content-shell" id="features">
+          <div class="section-heading">
+            <p class="eyebrow">Today’s Studio Pulse</p>
+            <h2>经营看板</h2>
+          </div>
+          <div class="metric-grid" id="metricGrid"></div>
+          <div class="home-links">
+            <a href="#/works"><span>01</span><strong>作品库</strong><small>照片上传、自动排版、拖拽排序</small></a>
+            <a href="#/products"><span>02</span><strong>产品价格</strong><small>售价、成本、利润率和库存</small></a>
+            <a href="#/inventory"><span>03</span><strong>颜色库存</strong><small>补货提醒、消耗记录和安全线</small></a>
+            <a href="#/finance"><span>04</span><strong>财务账本</strong><small>收入、支出、利润和现金流</small></a>
+            <a href="#/summary"><span>05</span><strong>月报年报</strong><small>金钱、库存消耗和经营复盘</small></a>
+          </div>
+        </section>
+      </section>
+
+      <section class="page content-shell" data-page="works">
+        <div class="page-head">
+          <div>
+            <p class="eyebrow">Curated Works</p>
+            <h1>作品库</h1>
+            <p>把做好的拼豆作品拍下来上传，系统会自动排成好看的作品墙。拖动卡片可以调整展示顺序。</p>
+          </div>
+          <div class="head-actions">
+            <label class="upload-button">
+              <input id="workUpload" type="file" accept="image/*" capture="environment" multiple />
+              拍照/上传作品
+            </label>
+            <button class="ghost-button" id="addWork">手动新增</button>
+          </div>
+        </div>
+        <div class="toolbar">
+          <input id="workSearch" type="search" placeholder="搜索作品、分类、状态" />
+          <select id="workFilter" aria-label="作品筛选">
+            <option value="all">全部作品</option>
+            <option value="现货">现货</option>
+            <option value="定制">定制</option>
+            <option value="礼盒">礼盒</option>
+          </select>
+        </div>
+        <div class="studio-board" id="workBoard"></div>
+      </section>
+
+      <section class="page content-shell" data-page="products">
+        <div class="page-head">
+          <div>
+            <p class="eyebrow">Product Menu</p>
+            <h1>产品与价格</h1>
+            <p>管理每个产品的售价、成本、利润、库存和销售状态，适合现货和定制一起用。</p>
+          </div>
+          <button class="icon-button" id="addProduct" title="新增产品" aria-label="新增产品">+</button>
+        </div>
+        <div class="metric-grid compact" id="productMetrics"></div>
+        <div class="panel">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>产品</th>
+                  <th>分类</th>
+                  <th>售价</th>
+                  <th>成本</th>
+                  <th>毛利</th>
+                  <th>库存</th>
+                  <th>状态</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="productTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="page content-shell" data-page="inventory">
+        <div class="page-head">
+          <div>
+            <p class="eyebrow">Bead Palette</p>
+            <h1>拼豆颜色库存</h1>
+            <p>每种颜色都有安全库存线，低于最低值会进入补货提醒。可记录一次制作消耗。</p>
+          </div>
+          <button class="icon-button" id="addColor" title="新增颜色" aria-label="新增颜色">+</button>
+        </div>
+        <div class="split">
+          <div class="panel">
+            <div class="section-heading inline">
+              <div>
+                <p class="eyebrow">Color Stock</p>
+                <h2>颜色列表</h2>
+              </div>
+              <button class="ghost-button" id="consumeColor">记录消耗</button>
+            </div>
+            <div class="color-list" id="colorList"></div>
+          </div>
+          <div class="panel">
+            <div class="section-heading">
+              <p class="eyebrow">Restock</p>
+              <h2>补货提醒</h2>
+            </div>
+            <div class="restock-list" id="restockList"></div>
+          </div>
+        </div>
+        <div class="panel recent-consumption">
+          <div class="section-heading">
+            <p class="eyebrow">Usage Ledger</p>
+            <h2>最近消耗记录</h2>
+          </div>
+          <div class="summary-list" id="consumptionList"></div>
+        </div>
+      </section>
+
+      <section class="page content-shell" data-page="finance">
+        <div class="page-head">
+          <div>
+            <p class="eyebrow">Money Ledger</p>
+            <h1>收入、支出与利润</h1>
+            <p>记录订单收入、材料支出、包装和工具成本，自动计算利润与现金流。</p>
+          </div>
+        </div>
+        <div class="metric-grid compact" id="financeMetrics"></div>
+        <div class="panel finance-panel">
+          <form class="ledger-form" id="ledgerForm">
+            <select id="ledgerType" aria-label="账目类型">
+              <option value="income">收入</option>
+              <option value="expense">支出</option>
+            </select>
+            <input id="ledgerName" type="text" placeholder="项目，例如：定制头像订单" required />
+            <input id="ledgerAmount" type="number" min="0" step="0.01" placeholder="金额" required />
+            <input id="ledgerDate" type="date" required />
+            <button type="submit">记录</button>
+          </form>
+          <div class="ledger-list" id="ledgerList"></div>
+        </div>
+      </section>
+
+      <section class="page content-shell" data-page="summary">
+        <div class="page-head">
+          <div>
+            <p class="eyebrow">Monthly & Yearly Review</p>
+            <h1>经营总结</h1>
+            <p>按月份或年份查看收入、支出、利润、拼豆消耗、库存结余、产品与作品情况，适合每月复盘和年度总结。</p>
+          </div>
+          <div class="summary-controls">
+            <select id="summaryMode" aria-label="总结类型">
+              <option value="day">日总结</option>
+              <option value="month">月总结</option>
+              <option value="year">年总结</option>
+            </select>
+            <input id="summaryDay" type="date" aria-label="选择日期" />
+            <input id="summaryMonth" type="month" aria-label="选择月份" />
+            <input id="summaryYear" type="number" min="2020" max="2099" aria-label="选择年份" />
+          </div>
+        </div>
+
+        <div class="metric-grid compact" id="summaryMetrics"></div>
+
+        <div class="summary-layout">
+          <article class="panel summary-hero-card">
+            <p class="eyebrow" id="summaryPeriodLabel">Studio Review</p>
+            <h2 id="summaryHeadline">本期经营复盘</h2>
+            <p id="summaryNarrative"></p>
+          </article>
+
+          <article class="panel">
+            <div class="section-heading">
+              <p class="eyebrow">Bead Usage</p>
+              <h2>拼豆消耗排行</h2>
+            </div>
+            <div class="summary-list" id="usageSummary"></div>
+          </article>
+
+          <article class="panel">
+            <div class="section-heading">
+              <p class="eyebrow">Money Flow</p>
+              <h2>收支明细</h2>
+            </div>
+            <div class="summary-list" id="moneySummary"></div>
+          </article>
+
+          <article class="panel">
+            <div class="section-heading">
+              <p class="eyebrow">Inventory Snapshot</p>
+              <h2>库存结余</h2>
+            </div>
+            <div class="summary-list" id="stockSummary"></div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <strong>iDOU Handcraft Studio</strong>
+      <span>Artwork, stock, pricing and profit in one beautiful place.</span>
+    </footer>
+
+    <dialog id="editDialog">
+      <form method="dialog" class="dialog-card" id="editForm">
+        <h3 id="dialogTitle">编辑</h3>
+        <div id="dialogFields"></div>
+        <menu>
+          <button type="button" value="cancel" class="ghost" id="closeDialog">取消</button>
+          <button type="submit" value="default">保存</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <script src="./script.js"></script>
+  </body>
+</html>

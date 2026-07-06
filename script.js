@@ -144,11 +144,13 @@ const els = {
 
 let editContext = null;
 let dragId = null;
+let productDragId = null;
 let cloudUser = null;
 let cloudReady = false;
 let loadingCloud = false;
 let cloudSaveTimer = null;
 let lastCloudError = "";
+let productSortOrderReady = true;
 els.ledgerDate.value = today;
 els.summaryDay.value = today;
 els.summaryMonth.value = today.slice(0, 7);
@@ -242,7 +244,7 @@ async function loadCloudState() {
   try {
     const [works, products, colors, ledger, consumptions] = await Promise.all([
       selectCloudTable("works", "sort_order"),
-      selectCloudTable("products", "created_at"),
+      selectCloudTable("products", "sort_order"),
       selectCloudTable("colors", "created_at"),
       selectCloudTable("ledger", "date"),
       selectCloudTable("consumptions", "date"),
@@ -275,9 +277,17 @@ async function loadCloudState() {
 
 async function selectCloudTable(table, orderColumn) {
   let query = supabaseClient.from(table).select("*").eq("user_id", cloudUser.id);
-  if (orderColumn) query = query.order(orderColumn, { ascending: table === "works" });
+  if (orderColumn) query = query.order(orderColumn, { ascending: orderColumn === "sort_order" });
+  if (table === "products" && orderColumn === "sort_order") query = query.order("created_at", { ascending: false });
   const { data, error } = await query;
+  if (error && table === "products" && orderColumn === "sort_order" && /sort_order|schema cache|column/i.test(error.message)) {
+    productSortOrderReady = false;
+    const fallback = await supabaseClient.from(table).select("*").eq("user_id", cloudUser.id).order("created_at", { ascending: false });
+    if (fallback.error) throw fallback.error;
+    return fallback.data || [];
+  }
   if (error) throw error;
+  if (table === "products" && orderColumn === "sort_order") productSortOrderReady = true;
   return data || [];
 }
 
@@ -332,8 +342,8 @@ function serializeWork(item, index) {
   };
 }
 
-function serializeProduct(item) {
-  return {
+function serializeProduct(item, index) {
+  const row = {
     id: item.id,
     user_id: cloudUser.id,
     name: item.name,
@@ -343,6 +353,8 @@ function serializeProduct(item) {
     stock: Number(item.stock || 0),
     status: item.status,
   };
+  if (productSortOrderReady) row.sort_order = index;
+  return row;
 }
 
 function serializeColor(item) {
@@ -402,6 +414,7 @@ function parseProduct(item) {
     cost: Number(item.cost || 0),
     stock: Number(item.stock || 0),
     status: item.status,
+    sortOrder: Number(item.sort_order || 0),
   };
 }
 
@@ -623,7 +636,7 @@ function renderProducts() {
   els.productTable.innerHTML = state.products.map((item, index) => {
     const margin = item.price ? Math.round(((item.price - item.cost) / item.price) * 100) : 0;
     return `
-      <tr style="--stagger:${index}">
+      <tr class="product-row" draggable="true" data-product-id="${item.id}" style="--stagger:${index}">
         <td>${escapeHtml(item.name)}</td>
         <td>${escapeHtml(item.category)}</td>
         <td>${currency.format(Number(item.price))}</td>
@@ -632,6 +645,9 @@ function renderProducts() {
         <td>${Number(item.stock)}</td>
         <td><span class="status">${escapeHtml(item.status)}</span></td>
         <td>
+          <button class="row-button drag-handle" type="button" title="拖动排序" aria-label="拖动排序">↕</button>
+          <button class="row-button" data-action="move-product-up" data-id="${item.id}" title="上移" ${index === 0 ? "disabled" : ""}>↑</button>
+          <button class="row-button" data-action="move-product-down" data-id="${item.id}" title="下移" ${index === state.products.length - 1 ? "disabled" : ""}>↓</button>
           <button class="row-button" data-action="edit-product" data-id="${item.id}" title="编辑">✎</button>
           <button class="row-button" data-action="delete-product" data-id="${item.id}" title="删除">×</button>
         </td>
@@ -1214,6 +1230,14 @@ function readImageFile(file) {
   });
 }
 
+function moveProduct(id, direction) {
+  const index = state.products.findIndex((item) => item.id === id);
+  const nextIndex = index + direction;
+  if (index < 0 || nextIndex < 0 || nextIndex >= state.products.length) return;
+  const [item] = state.products.splice(index, 1);
+  state.products.splice(nextIndex, 0, item);
+}
+
 document.body.addEventListener("click", (event) => {
   const button = event.target.closest("[data-action]");
   if (!button) return;
@@ -1223,6 +1247,8 @@ document.body.addEventListener("click", (event) => {
   if (action === "edit-color") openEditor("color", state.colors.find((item) => item.id === id));
   if (action === "edit-work") openEditor("work", state.works.find((item) => item.id === id));
   if (action === "delete-product") state.products = state.products.filter((item) => item.id !== id);
+  if (action === "move-product-up") moveProduct(id, -1);
+  if (action === "move-product-down") moveProduct(id, 1);
   if (action === "delete-color") state.colors = state.colors.filter((item) => item.id !== id);
   if (action === "delete-work") state.works = state.works.filter((item) => item.id !== id);
   if (action === "delete-ledger") state.ledger = state.ledger.filter((item) => item.id !== id);
@@ -1257,6 +1283,30 @@ els.workBoard.addEventListener("dragover", (event) => {
   const to = state.works.findIndex((item) => item.id === tile.dataset.id);
   const [moved] = state.works.splice(from, 1);
   state.works.splice(to, 0, moved);
+  render();
+});
+
+els.productTable.addEventListener("dragstart", (event) => {
+  const row = event.target.closest(".product-row");
+  if (!row) return;
+  productDragId = row.dataset.productId;
+  row.classList.add("dragging");
+});
+
+els.productTable.addEventListener("dragend", (event) => {
+  event.target.closest(".product-row")?.classList.remove("dragging");
+  productDragId = null;
+});
+
+els.productTable.addEventListener("dragover", (event) => {
+  event.preventDefault();
+  const row = event.target.closest(".product-row");
+  if (!row || !productDragId || row.dataset.productId === productDragId) return;
+  const from = state.products.findIndex((item) => item.id === productDragId);
+  const to = state.products.findIndex((item) => item.id === row.dataset.productId);
+  if (from < 0 || to < 0) return;
+  const [moved] = state.products.splice(from, 1);
+  state.products.splice(to, 0, moved);
   render();
 });
 

@@ -23,8 +23,11 @@ create table if not exists public.products (
   cost numeric not null default 0,
   stock integer not null default 0,
   status text not null default '编辑中',
+  sort_order integer not null default 0,
   created_at timestamptz not null default now()
 );
+
+alter table public.products add column if not exists sort_order integer not null default 0;
 
 create table if not exists public.colors (
   id uuid primary key default gen_random_uuid(),

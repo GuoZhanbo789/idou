@@ -208,6 +208,17 @@
             <input id="ledgerDate" type="date" required />
             <button type="submit">记录</button>
           </form>
+          <div class="toolbar ledger-toolbar" aria-label="账目筛选">
+            <select id="ledgerFilterType" aria-label="筛选账目类型">
+              <option value="all">全部账目</option>
+              <option value="income">只看收入</option>
+              <option value="expense">只看支出</option>
+            </select>
+            <input id="ledgerFilterDate" type="date" aria-label="按日期筛选账目" />
+            <input id="ledgerSearch" type="search" placeholder="搜索项目、金额、收入或支出" aria-label="搜索账目关键词" />
+            <button class="ghost-button" id="clearLedgerFilters" type="button">清空筛选</button>
+          </div>
+          <div class="ledger-result-label" id="ledgerResultLabel"></div>
           <div class="ledger-list" id="ledgerList"></div>
         </div>
       </section>
@@ -234,35 +245,39 @@
         <div class="metric-grid compact" id="summaryMetrics"></div>
 
         <div class="summary-layout">
-          <article class="panel summary-hero-card">
-            <p class="eyebrow" id="summaryPeriodLabel">Studio Review</p>
-            <h2 id="summaryHeadline">本期经营复盘</h2>
-            <p id="summaryNarrative"></p>
-          </article>
+          <div class="summary-column">
+            <article class="panel summary-hero-card">
+              <p class="eyebrow" id="summaryPeriodLabel">Studio Review</p>
+              <h2 id="summaryHeadline">本期经营复盘</h2>
+              <p id="summaryNarrative"></p>
+            </article>
 
-          <article class="panel">
-            <div class="section-heading">
-              <p class="eyebrow">Bead Usage</p>
-              <h2>拼豆消耗排行</h2>
-            </div>
-            <div class="summary-list" id="usageSummary"></div>
-          </article>
+            <article class="panel">
+              <div class="section-heading">
+                <p class="eyebrow">Money Flow</p>
+                <h2>收支明细</h2>
+              </div>
+              <div class="summary-list" id="moneySummary"></div>
+            </article>
+          </div>
 
-          <article class="panel">
-            <div class="section-heading">
-              <p class="eyebrow">Money Flow</p>
-              <h2>收支明细</h2>
-            </div>
-            <div class="summary-list" id="moneySummary"></div>
-          </article>
+          <div class="summary-column">
+            <article class="panel">
+              <div class="section-heading">
+                <p class="eyebrow">Bead Usage</p>
+                <h2>拼豆消耗排行</h2>
+              </div>
+              <div class="summary-list" id="usageSummary"></div>
+            </article>
 
-          <article class="panel">
-            <div class="section-heading">
-              <p class="eyebrow">Inventory Snapshot</p>
-              <h2>库存结余</h2>
-            </div>
-            <div class="summary-list" id="stockSummary"></div>
-          </article>
+            <article class="panel">
+              <div class="section-heading">
+                <p class="eyebrow">Inventory Snapshot</p>
+                <h2>库存结余</h2>
+              </div>
+              <div class="summary-list" id="stockSummary"></div>
+            </article>
+          </div>
         </div>
       </section>
     </main>

@@ -121,6 +121,11 @@ const els = {
   ledgerList: document.querySelector("#ledgerList"),
   ledgerForm: document.querySelector("#ledgerForm"),
   ledgerDate: document.querySelector("#ledgerDate"),
+  ledgerFilterType: document.querySelector("#ledgerFilterType"),
+  ledgerFilterDate: document.querySelector("#ledgerFilterDate"),
+  ledgerSearch: document.querySelector("#ledgerSearch"),
+  clearLedgerFilters: document.querySelector("#clearLedgerFilters"),
+  ledgerResultLabel: document.querySelector("#ledgerResultLabel"),
   workBoard: document.querySelector("#workBoard"),
   workUpload: document.querySelector("#workUpload"),
   workSearch: document.querySelector("#workSearch"),
@@ -706,9 +711,27 @@ function renderColors() {
 }
 
 function renderLedger() {
-  els.ledgerList.innerHTML = state.ledger
-    .slice()
-    .sort((a, b) => b.date.localeCompare(a.date))
+  const filterType = els.ledgerFilterType?.value || "all";
+  const filterDate = els.ledgerFilterDate?.value || "";
+  const keyword = (els.ledgerSearch?.value || "").trim().toLowerCase();
+  const filteredLedger = state.ledger
+    .filter((item) => filterType === "all" || item.type === filterType)
+    .filter((item) => !filterDate || item.date === filterDate)
+    .filter((item) => {
+      if (!keyword) return true;
+      const typeLabel = item.type === "income" ? "收入" : "支出";
+      return `${item.name} ${item.date} ${typeLabel} ${item.amount}`.toLowerCase().includes(keyword);
+    })
+    .sort((a, b) => b.date.localeCompare(a.date));
+
+  if (els.ledgerResultLabel) {
+    els.ledgerResultLabel.textContent = filteredLedger.length === state.ledger.length
+      ? `共 ${state.ledger.length} 条账目`
+      : `显示 ${filteredLedger.length} / ${state.ledger.length} 条账目`;
+  }
+
+  els.ledgerList.innerHTML = filteredLedger.length
+    ? filteredLedger
     .map((item, index) => `
       <article class="ledger-item" style="--stagger:${index}">
         <div>
@@ -721,7 +744,8 @@ function renderLedger() {
           <button class="row-button" data-action="delete-ledger" data-id="${item.id}" title="删除">×</button>
         </div>
       </article>
-    `).join("");
+    `).join("")
+    : emptySummary(keyword || filterDate || filterType !== "all" ? "没有找到匹配账目" : "还没有账目记录");
 }
 
 function renderSummary() {
@@ -1390,6 +1414,16 @@ els.ledgerForm.addEventListener("submit", (event) => {
   els.ledgerForm.reset();
   els.ledgerDate.value = today;
   render();
+});
+
+els.ledgerFilterType?.addEventListener("change", renderLedger);
+els.ledgerFilterDate?.addEventListener("change", renderLedger);
+els.ledgerSearch?.addEventListener("input", renderLedger);
+els.clearLedgerFilters?.addEventListener("click", () => {
+  els.ledgerFilterType.value = "all";
+  els.ledgerFilterDate.value = "";
+  els.ledgerSearch.value = "";
+  renderLedger();
 });
 
 els.loginButton.addEventListener("click", () => {

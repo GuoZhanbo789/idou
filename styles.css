@@ -745,6 +745,12 @@ dialog menu .ghost {
   margin-bottom: 14px;
 }
 
+.ledger-toolbar {
+  grid-template-columns: 160px 190px minmax(220px, 1fr) auto;
+  align-items: stretch;
+  margin: 14px 0 8px;
+}
+
 .toolbar input,
 .toolbar select,
 .summary-controls input,
@@ -777,6 +783,14 @@ dialog menu .ghost {
   background: rgba(255, 252, 246, 0.94);
   box-shadow: 0 0 0 4px rgba(185, 141, 67, 0.12);
   transform: translateY(-1px);
+}
+
+.ledger-result-label {
+  min-height: 24px;
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .dialog-card textarea {
@@ -819,6 +833,12 @@ dialog menu .ghost {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
   align-items: start;
+  gap: 14px;
+}
+
+.summary-column {
+  display: grid;
+  align-content: start;
   gap: 14px;
 }
 

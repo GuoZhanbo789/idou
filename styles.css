@@ -818,6 +818,7 @@ dialog menu .ghost {
 .summary-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  align-items: start;
   gap: 14px;
 }
 
@@ -847,19 +848,51 @@ dialog menu .ghost {
 }
 
 .recent-consumption [data-reveal],
-.recent-consumption .summary-item {
+.recent-consumption .summary-item,
+.finance-panel [data-reveal],
+.finance-panel .ledger-item,
+.summary-layout .panel:not(.summary-hero-card) [data-reveal],
+.summary-layout .panel:not(.summary-hero-card) .summary-item {
   opacity: 1;
   transform: none;
 }
 
 .summary-hero-card {
-  min-height: 420px;
+  min-height: 320px;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  justify-content: flex-start;
   background:
     radial-gradient(circle at 22% 18%, rgba(185, 141, 67, 0.18), transparent 30%),
     linear-gradient(135deg, rgba(255, 252, 246, 0.92), rgba(238, 229, 214, 0.78));
+}
+
+.summary-layout .panel:not(.summary-hero-card) {
+  align-self: start;
+}
+
+.summary-layout .panel:not(.summary-hero-card) .summary-list {
+  max-height: min(520px, 58vh);
+  overflow-y: auto;
+  padding-right: 8px;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(185, 141, 67, 0.45) rgba(255, 250, 240, 0.62);
+}
+
+.summary-layout .panel:not(.summary-hero-card) .summary-list::-webkit-scrollbar,
+.ledger-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.summary-layout .panel:not(.summary-hero-card) .summary-list::-webkit-scrollbar-track,
+.ledger-list::-webkit-scrollbar-track {
+  background: rgba(255, 250, 240, 0.62);
+}
+
+.summary-layout .panel:not(.summary-hero-card) .summary-list::-webkit-scrollbar-thumb,
+.ledger-list::-webkit-scrollbar-thumb {
+  background: rgba(185, 141, 67, 0.45);
 }
 
 .summary-hero-card h2 {
@@ -1154,6 +1187,15 @@ tbody tr:hover {
 .ledger-list {
   display: grid;
   gap: 10px;
+}
+
+.finance-panel .ledger-list {
+  max-height: min(620px, 64vh);
+  overflow-y: auto;
+  padding-right: 8px;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(185, 141, 67, 0.45) rgba(255, 250, 240, 0.62);
 }
 
 .color-item,

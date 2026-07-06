@@ -803,7 +803,7 @@ function renderMoneySummary(ledger, income, expense) {
   const rows = [
     { name: "收入合计", total: income, count: ledger.filter((item) => item.type === "income").length },
     { name: "支出合计", total: expense, count: ledger.filter((item) => item.type === "expense").length },
-    ...groupByName(ledger, "name", "amount").slice(0, 4),
+    ...groupByName(ledger, "name", "amount"),
   ];
   if (!ledger.length) return emptySummary("本期暂无收支记录");
   const max = Math.max(...rows.map((item) => item.total), 1);
@@ -1079,7 +1079,7 @@ function prepareMotion() {
   ].join(","));
 
   targets.forEach((target, index) => {
-    if (target.closest(".recent-consumption")) {
+    if (target.closest(".recent-consumption, .finance-panel, .summary-layout .panel:not(.summary-hero-card)")) {
       target.classList.add("is-visible");
       target.removeAttribute("data-reveal");
       return;

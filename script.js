@@ -11,6 +11,10 @@ const SUPABASE_ANON_KEY = "sb_publishable_EBF9jUq9jqg7dGrnu3ftDQ_33nXUgow";
 const SUPABASE_STORAGE_BUCKET = "work-images";
 const SITE_REDIRECT_URL = `${window.location.origin}${window.location.pathname}`;
 const PIECES_PER_GRAM = 100;
+const colorNumberSorter = new Intl.Collator("zh-CN", {
+  numeric: true,
+  sensitivity: "base",
+});
 const supabaseReady = SUPABASE_URL.startsWith("https://")
   && (SUPABASE_ANON_KEY.startsWith("ey") || SUPABASE_ANON_KEY.startsWith("sb_publishable_"))
   && window.supabase;
@@ -240,7 +244,7 @@ async function loadCloudState() {
     if (hasCloudData) {
       state.works = works.map(parseWork);
       state.products = products.map(parseProduct);
-      state.colors = colors.map(parseColor);
+      state.colors = sortColors(colors.map(parseColor));
       state.ledger = ledger.map(parseLedger);
       state.consumptions = consumptions.map(parseConsumption);
     } else {
@@ -508,6 +512,30 @@ function metricCards(items) {
   `).join("");
 }
 
+function normalizeColorNumber(value) {
+  return String(value || "").trim().replace(/\s+/g, "").toUpperCase();
+}
+
+function compareColorsByNumber(a, b) {
+  const aNumber = normalizeColorNumber(a.number);
+  const bNumber = normalizeColorNumber(b.number);
+  if (aNumber && bNumber) {
+    const result = colorNumberSorter.compare(aNumber, bNumber);
+    if (result) return result;
+  }
+  if (aNumber && !bNumber) return -1;
+  if (!aNumber && bNumber) return 1;
+  return colorNumberSorter.compare(a.name || "", b.name || "");
+}
+
+function sortColors(colors) {
+  return [...colors].sort(compareColorsByNumber);
+}
+
+function getSortedColors() {
+  return sortColors(state.colors);
+}
+
 function getWorkCategories() {
   return [...new Set([
     "现货",
@@ -582,7 +610,8 @@ function renderProducts() {
 }
 
 function renderColors() {
-  els.colorList.innerHTML = state.colors.map((item, index) => {
+  const sortedColors = getSortedColors();
+  els.colorList.innerHTML = sortedColors.map((item, index) => {
     const low = item.stock < item.min;
     return `
       <article class="color-item" style="--stagger:${index}">
@@ -600,8 +629,8 @@ function renderColors() {
     `;
   }).join("");
 
-  const low = state.colors.filter((item) => item.stock < item.min);
-  els.restockList.innerHTML = (low.length ? low : state.colors.slice(0, 4)).map((item, index) => {
+  const low = sortedColors.filter((item) => item.stock < item.min);
+  els.restockList.innerHTML = (low.length ? low : sortedColors.slice(0, 4)).map((item, index) => {
     const need = Math.max(0, item.min - item.stock);
     return `
       <article class="restock-item" style="--stagger:${index}">
@@ -652,7 +681,7 @@ function renderSummary() {
   const profit = income - expense;
   const consumed = consumptions.reduce((sum, item) => sum + Number(item.amount), 0);
   const productValue = state.products.reduce((sum, item) => sum + Number(item.price) * Number(item.stock), 0);
-  const lowColors = state.colors.filter((item) => item.stock < item.min);
+  const lowColors = getSortedColors().filter((item) => item.stock < item.min);
   const profitRate = income ? Math.round((profit / income) * 100) : 0;
 
   els.summaryPeriodLabel.textContent = `${period.label} · ${period.mode === "day" ? "Daily Review" : period.mode === "month" ? "Monthly Review" : "Yearly Review"}`;
@@ -891,9 +920,10 @@ function workFields(item) {
 }
 
 function consumeFields() {
+  const sortedColors = getSortedColors();
   return `
     <select name="colorId" required>
-      ${state.colors.map((item) => `<option value="${item.id}">${escapeHtml(item.name)} · ${formatStock(item.stock)}</option>`).join("")}
+      ${sortedColors.map((item) => `<option value="${item.id}">${escapeHtml(item.number || "未编号")} · ${escapeHtml(item.name)} · ${formatStock(item.stock)}</option>`).join("")}
     </select>
     <input name="amount" type="number" min="1" step="1" placeholder="消耗颗数" required />
     <input name="project" type="text" placeholder="用途，例如：花束钥匙扣 / 客单定制" />

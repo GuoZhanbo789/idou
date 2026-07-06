@@ -103,6 +103,7 @@ const els = {
   productTable: document.querySelector("#productTable"),
   colorList: document.querySelector("#colorList"),
   restockList: document.querySelector("#restockList"),
+  consumptionTitle: document.querySelector("#consumptionTitle"),
   consumptionList: document.querySelector("#consumptionList"),
   stockUnit: document.querySelector("#stockUnit"),
   importColors: document.querySelector("#importColors"),
@@ -647,8 +648,11 @@ function renderColors() {
     `;
   }).join("");
 
+  els.consumptionTitle.textContent = state.consumptions.length
+    ? `最近消耗记录 · ${state.consumptions.length} 条`
+    : "最近消耗记录";
   els.consumptionList.innerHTML = state.consumptions.length
-    ? state.consumptions.slice(0, 8).map((item, index) => `
+    ? state.consumptions.map((item, index) => `
       <article class="summary-item consumption-item" style="--stagger:${index}">
         <div>
           <strong>${escapeHtml(item.colorName)}</strong>

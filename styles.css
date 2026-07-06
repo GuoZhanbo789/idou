@@ -825,6 +825,27 @@ dialog menu .ghost {
   margin-top: 14px;
 }
 
+.recent-consumption .summary-list {
+  max-height: min(640px, 62vh);
+  overflow-y: auto;
+  padding-right: 8px;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(185, 141, 67, 0.45) rgba(255, 250, 240, 0.62);
+}
+
+.recent-consumption .summary-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.recent-consumption .summary-list::-webkit-scrollbar-track {
+  background: rgba(255, 250, 240, 0.62);
+}
+
+.recent-consumption .summary-list::-webkit-scrollbar-thumb {
+  background: rgba(185, 141, 67, 0.45);
+}
+
 .summary-hero-card {
   min-height: 420px;
   display: flex;

@@ -451,6 +451,7 @@ function route() {
 
 function render() {
   renderMetrics();
+  renderWorkFilter();
   renderWorks();
   renderProducts();
   renderColors();
@@ -505,6 +506,27 @@ function metricCards(items) {
       <small>${note}</small>
     </article>
   `).join("");
+}
+
+function getWorkCategories() {
+  return [...new Set([
+    "现货",
+    "定制",
+    "礼盒",
+    "钥匙扣",
+    "杯垫",
+    ...state.works.map((item) => item.category),
+  ].map((value) => String(value || "").trim()).filter(Boolean))];
+}
+
+function renderWorkFilter() {
+  const current = els.workFilter.value || "all";
+  const categories = getWorkCategories();
+  els.workFilter.innerHTML = [
+    `<option value="all">全部作品</option>`,
+    ...categories.map((value) => `<option value="${escapeAttr(value)}">${escapeHtml(value)}</option>`),
+  ].join("");
+  els.workFilter.value = categories.includes(current) ? current : "all";
 }
 
 function renderWorks() {
@@ -855,11 +877,13 @@ function colorFields(item) {
 }
 
 function workFields(item) {
+  const categories = getWorkCategories();
   return `
     <input name="title" value="${escapeAttr(item.title)}" placeholder="作品名称" required />
-    <select name="category" required>
-      ${["现货", "定制", "礼盒", "钥匙扣", "杯垫"].map((value) => `<option ${item.category === value ? "selected" : ""}>${value}</option>`).join("")}
-    </select>
+    <input name="category" list="workCategoryOptions" value="${escapeAttr(item.category)}" placeholder="分类，例如：现货 / 发夹 / 挂件 / 客单" required />
+    <datalist id="workCategoryOptions">
+      ${categories.map((value) => `<option value="${escapeAttr(value)}"></option>`).join("")}
+    </datalist>
     <input name="price" type="number" min="0" step="0.01" value="${item.price}" placeholder="展示价格" required />
     <input name="status" value="${escapeAttr(item.status)}" placeholder="状态，例如：可售 / 已售 / 预约" required />
     <textarea name="note" placeholder="作品介绍">${escapeHtml(item.note)}</textarea>

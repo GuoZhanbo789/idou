@@ -544,6 +544,29 @@ function getSortedColors() {
   return sortColors(state.colors);
 }
 
+function findColorForConsumption(item) {
+  return state.colors.find((color) => color.id === item.colorId)
+    || state.colors.find((color) => color.name === item.colorName)
+    || null;
+}
+
+function compareConsumptions(a, b) {
+  const dateResult = String(b.date || "").localeCompare(String(a.date || ""));
+  if (dateResult) return dateResult;
+  const aColor = findColorForConsumption(a);
+  const bColor = findColorForConsumption(b);
+  const numberResult = compareColorsByNumber(
+    aColor || { number: "", name: a.colorName || "" },
+    bColor || { number: "", name: b.colorName || "" },
+  );
+  if (numberResult) return numberResult;
+  return String(a.project || "").localeCompare(String(b.project || ""));
+}
+
+function getSortedConsumptions() {
+  return [...state.consumptions].sort(compareConsumptions);
+}
+
 function getWorkCategories() {
   return [...new Set([
     "现货",
@@ -651,8 +674,9 @@ function renderColors() {
   els.consumptionTitle.textContent = state.consumptions.length
     ? `最近消耗记录 · ${state.consumptions.length} 条`
     : "最近消耗记录";
+  const sortedConsumptions = getSortedConsumptions();
   els.consumptionList.innerHTML = state.consumptions.length
-    ? state.consumptions.map((item, index) => `
+    ? sortedConsumptions.map((item, index) => `
       <article class="summary-item consumption-item" style="--stagger:${index}">
         <div>
           <strong>${escapeHtml(item.colorName)}</strong>
@@ -1039,6 +1063,11 @@ function prepareMotion() {
   ].join(","));
 
   targets.forEach((target, index) => {
+    if (target.closest(".recent-consumption")) {
+      target.classList.add("is-visible");
+      target.removeAttribute("data-reveal");
+      return;
+    }
     if (target.classList.contains("is-visible")) return;
     target.dataset.reveal = "";
     if (!target.style.getPropertyValue("--stagger")) target.style.setProperty("--stagger", Math.min(index, 10));

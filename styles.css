@@ -846,6 +846,12 @@ dialog menu .ghost {
   background: rgba(185, 141, 67, 0.45);
 }
 
+.recent-consumption [data-reveal],
+.recent-consumption .summary-item {
+  opacity: 1;
+  transform: none;
+}
+
 .summary-hero-card {
   min-height: 420px;
   display: flex;

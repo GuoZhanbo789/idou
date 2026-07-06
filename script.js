@@ -717,6 +717,7 @@ function renderLedger() {
         </div>
         <strong class="amount ${item.type}">${item.type === "income" ? "+" : "-"}${currency.format(Number(item.amount))}</strong>
         <div class="row-actions">
+          <button class="row-button" data-action="edit-ledger" data-id="${item.id}" title="编辑">✎</button>
           <button class="row-button" data-action="delete-ledger" data-id="${item.id}" title="删除">×</button>
         </div>
       </article>
@@ -784,7 +785,7 @@ function buildNarrative({ income, expense, profit, profitRate, consumed, lowColo
 }
 
 function renderUsageSummary(consumptions) {
-  const grouped = groupByName(consumptions, "colorName", "amount");
+  const grouped = groupUsageByColor(consumptions);
   if (!grouped.length) return emptySummary("本期暂无拼豆消耗记录");
   const max = Math.max(...grouped.map((item) => item.total), 1);
   return grouped.map((item, index) => `
@@ -797,6 +798,26 @@ function renderUsageSummary(consumptions) {
       <div class="summary-bar"><span style="--bar:${Math.round((item.total / max) * 100)}%"></span></div>
     </article>
   `).join("");
+}
+
+function groupUsageByColor(consumptions) {
+  const map = new Map();
+  consumptions.forEach((item) => {
+    const name = item.colorName || "未命名";
+    const current = map.get(name) || { name, total: 0, count: 0, color: findColorForConsumption(item) || findColorByText(name) };
+    current.total += Number(item.amount || 0);
+    current.count += 1;
+    if (!current.color) current.color = findColorForConsumption(item) || findColorByText(name);
+    map.set(name, current);
+  });
+  return [...map.values()].sort((a, b) => {
+    const totalResult = b.total - a.total;
+    if (totalResult) return totalResult;
+    return compareColorsByNumber(
+      a.color || { number: a.name, name: a.name },
+      b.color || { number: b.name, name: b.name },
+    );
+  });
 }
 
 function renderMoneySummary(ledger, income, expense) {
@@ -978,11 +999,12 @@ function normalizeHex(value) {
 
 function openEditor(kind, item) {
   editContext = { kind, id: item.id };
-  const titles = { product: "编辑产品", color: "编辑颜色", work: "编辑作品", consume: "记录拼豆消耗" };
+  const titles = { product: "编辑产品", color: "编辑颜色", work: "编辑作品", ledger: "编辑账目", consume: "记录拼豆消耗" };
   els.dialogTitle.textContent = titles[kind];
   if (kind === "product") els.dialogFields.innerHTML = productFields(item);
   if (kind === "color") els.dialogFields.innerHTML = colorFields(item);
   if (kind === "work") els.dialogFields.innerHTML = workFields(item);
+  if (kind === "ledger") els.dialogFields.innerHTML = ledgerFields(item);
   if (kind === "consume") els.dialogFields.innerHTML = consumeFields();
   els.dialog.showModal();
 }
@@ -1019,6 +1041,18 @@ function workFields(item) {
     <input name="price" type="number" min="0" step="0.01" value="${item.price}" placeholder="展示价格" required />
     <input name="status" value="${escapeAttr(item.status)}" placeholder="状态，例如：可售 / 已售 / 预约" required />
     <textarea name="note" placeholder="作品介绍">${escapeHtml(item.note)}</textarea>
+  `;
+}
+
+function ledgerFields(item) {
+  return `
+    <select name="type" aria-label="账目类型" required>
+      <option value="income" ${item.type === "income" ? "selected" : ""}>收入</option>
+      <option value="expense" ${item.type === "expense" ? "selected" : ""}>支出</option>
+    </select>
+    <input name="name" value="${escapeAttr(item.name)}" placeholder="项目名称" required />
+    <input name="amount" type="number" min="0" step="0.01" value="${Number(item.amount || 0)}" placeholder="金额" required />
+    <input name="date" type="date" value="${item.date || today}" required />
   `;
 }
 
@@ -1246,6 +1280,7 @@ document.body.addEventListener("click", (event) => {
   if (action === "edit-product") openEditor("product", state.products.find((item) => item.id === id));
   if (action === "edit-color") openEditor("color", state.colors.find((item) => item.id === id));
   if (action === "edit-work") openEditor("work", state.works.find((item) => item.id === id));
+  if (action === "edit-ledger") openEditor("ledger", state.ledger.find((item) => item.id === id));
   if (action === "delete-product") state.products = state.products.filter((item) => item.id !== id);
   if (action === "move-product-up") moveProduct(id, -1);
   if (action === "move-product-down") moveProduct(id, 1);
@@ -1329,10 +1364,10 @@ els.editForm.addEventListener("submit", () => {
       });
     }
   } else {
-    const map = { product: state.products, color: state.colors, work: state.works };
+    const map = { product: state.products, color: state.colors, work: state.works, ledger: state.ledger };
     const item = map[editContext.kind].find((entry) => entry.id === editContext.id);
     Object.assign(item, data);
-    ["price", "cost", "stock", "min"].forEach((key) => {
+    ["price", "cost", "stock", "min", "amount"].forEach((key) => {
       if (key in item) item[key] = Number(item[key]);
     });
   }

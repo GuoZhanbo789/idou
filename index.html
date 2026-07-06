@@ -166,6 +166,7 @@
               </div>
               <div class="head-actions">
                 <button class="ghost-button" id="consumeColor">记录消耗</button>
+                <button class="ghost-button" id="batchConsumeColor">批量消耗</button>
               </div>
             </div>
             <div class="color-list" id="colorList"></div>
@@ -306,6 +307,21 @@
         <menu>
           <button type="button" value="cancel" class="ghost" id="closeImport">取消</button>
           <button type="submit" value="default">导入</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="batchConsumeDialog">
+      <form class="dialog-card import-dialog-card" id="batchConsumeForm">
+        <h3>批量记录消耗</h3>
+        <p>每行一条消耗。支持：颜色编号/颜色名称、消耗数量、用途。数量可写“120”或“3g”。</p>
+        <input id="batchConsumeProject" type="text" placeholder="统一用途，例如：小狗杯垫 / 客单订单（可选）" />
+        <input id="batchConsumeDate" type="date" />
+        <textarea id="batchConsumeText" placeholder="A1, 120, 小狗杯垫&#10;A2, 3g, 小狗杯垫&#10;奶油白, 80, 客单订单"></textarea>
+        <small>颜色会按编号或名称自动匹配库存表，保存后会一次性扣库存并生成消耗记录。</small>
+        <menu>
+          <button type="button" value="cancel" class="ghost" id="closeBatchConsume">取消</button>
+          <button type="submit" value="default">批量保存</button>
         </menu>
       </form>
     </dialog>

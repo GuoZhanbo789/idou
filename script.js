@@ -110,6 +110,13 @@ const els = {
   importForm: document.querySelector("#importForm"),
   importText: document.querySelector("#importText"),
   closeImport: document.querySelector("#closeImport"),
+  batchConsumeColor: document.querySelector("#batchConsumeColor"),
+  batchConsumeDialog: document.querySelector("#batchConsumeDialog"),
+  batchConsumeForm: document.querySelector("#batchConsumeForm"),
+  batchConsumeText: document.querySelector("#batchConsumeText"),
+  batchConsumeProject: document.querySelector("#batchConsumeProject"),
+  batchConsumeDate: document.querySelector("#batchConsumeDate"),
+  closeBatchConsume: document.querySelector("#closeBatchConsume"),
   ledgerList: document.querySelector("#ledgerList"),
   ledgerForm: document.querySelector("#ledgerForm"),
   ledgerDate: document.querySelector("#ledgerDate"),
@@ -831,6 +838,10 @@ function parseStockValue(value) {
   return Math.round(number);
 }
 
+function normalizeLookup(value) {
+  return String(value || "").trim().replace(/\s+/g, "").toLowerCase();
+}
+
 function parseColorImport(text) {
   return String(text || "")
     .split(/\r?\n/)
@@ -866,6 +877,54 @@ function parseColorLine(line) {
     stock,
     min,
   };
+}
+
+function parseBatchConsumption(text, fallbackProject, fallbackDate) {
+  const records = [];
+  const errors = [];
+  String(text || "").split(/\r?\n/).forEach((line, index) => {
+    const clean = line.trim();
+    if (!clean) return;
+    const parts = clean
+      .split(/\t|,|，|;|；/)
+      .map((part) => part.trim())
+      .filter(Boolean);
+    const tokens = parts.length > 1 ? parts : clean.split(/\s+/).map((part) => part.trim()).filter(Boolean);
+    const amountIndex = tokens.findIndex((token) => /^\d+(\.\d+)?\s*(kg|公斤|千克|g|克|颗|粒|pcs|pieces)?$/i.test(token));
+    if (amountIndex < 0) {
+      errors.push(`第 ${index + 1} 行没有识别到消耗数量`);
+      return;
+    }
+
+    const lookup = tokens.slice(0, amountIndex).join("");
+    const color = findColorByText(lookup);
+    if (!color) {
+      errors.push(`第 ${index + 1} 行找不到颜色：${lookup || clean}`);
+      return;
+    }
+
+    const amount = parseStockValue(tokens[amountIndex]);
+    if (amount <= 0) {
+      errors.push(`第 ${index + 1} 行消耗数量必须大于 0`);
+      return;
+    }
+
+    records.push({
+      color,
+      amount,
+      project: tokens.slice(amountIndex + 1).join(" ") || fallbackProject || "批量记录",
+      date: fallbackDate || today,
+    });
+  });
+  return { records, errors };
+}
+
+function findColorByText(value) {
+  const lookup = normalizeLookup(value);
+  if (!lookup) return null;
+  return state.colors.find((item) => {
+    return normalizeLookup(item.number) === lookup || normalizeLookup(item.name) === lookup;
+  }) || null;
 }
 
 function normalizeHex(value) {
@@ -1009,6 +1068,49 @@ document.querySelector("#consumeColor").addEventListener("click", () => {
   editContext = { kind: "consume" };
   openEditor("consume", {});
 });
+
+if (els.batchConsumeColor && els.batchConsumeDialog && els.batchConsumeForm) {
+  els.batchConsumeColor.addEventListener("click", () => {
+    els.batchConsumeProject.value = "";
+    els.batchConsumeDate.value = today;
+    els.batchConsumeText.value = "";
+    els.batchConsumeDialog.showModal();
+  });
+
+  els.closeBatchConsume.addEventListener("click", () => els.batchConsumeDialog.close());
+
+  els.batchConsumeForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const { records, errors } = parseBatchConsumption(
+      els.batchConsumeText.value,
+      els.batchConsumeProject.value.trim(),
+      els.batchConsumeDate.value || today,
+    );
+    if (errors.length) {
+      alert(errors.slice(0, 6).join("\n"));
+      return;
+    }
+    if (!records.length) {
+      alert("没有识别到消耗数据。请按：颜色编号/名称、数量、用途 的格式输入。");
+      return;
+    }
+
+    records.forEach(({ color, amount, project, date }) => {
+      color.stock = Math.max(0, Number(color.stock || 0) - amount);
+      state.consumptions.unshift({
+        id: crypto.randomUUID(),
+        colorId: color.id,
+        colorName: color.name,
+        amount,
+        date,
+        project,
+      });
+    });
+    els.batchConsumeDialog.close();
+    render();
+    alert(`已批量记录 ${records.length} 条消耗。`);
+  });
+}
 
 if (els.importColors && els.importDialog && els.importForm && els.importText && els.closeImport) {
   els.importColors.addEventListener("click", () => {

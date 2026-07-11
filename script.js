@@ -118,6 +118,11 @@ const els = {
   batchConsumeProject: document.querySelector("#batchConsumeProject"),
   batchConsumeDate: document.querySelector("#batchConsumeDate"),
   closeBatchConsume: document.querySelector("#closeBatchConsume"),
+  batchRestockColor: document.querySelector("#batchRestockColor"),
+  batchRestockDialog: document.querySelector("#batchRestockDialog"),
+  batchRestockForm: document.querySelector("#batchRestockForm"),
+  batchRestockText: document.querySelector("#batchRestockText"),
+  closeBatchRestock: document.querySelector("#closeBatchRestock"),
   ledgerList: document.querySelector("#ledgerList"),
   ledgerForm: document.querySelector("#ledgerForm"),
   ledgerDate: document.querySelector("#ledgerDate"),
@@ -1008,6 +1013,41 @@ function parseBatchConsumption(text, fallbackProject, fallbackDate) {
   return { records, errors };
 }
 
+function parseBatchRestock(text) {
+  const records = [];
+  const errors = [];
+  String(text || "").split(/\r?\n/).forEach((line, index) => {
+    const clean = line.trim();
+    if (!clean) return;
+    const parts = clean
+      .split(/\t|,|，|;|；/)
+      .map((part) => part.trim())
+      .filter(Boolean);
+    const tokens = parts.length > 1 ? parts : clean.split(/\s+/).map((part) => part.trim()).filter(Boolean);
+    const amountIndex = tokens.findIndex((token) => /^\d+(\.\d+)?\s*(kg|公斤|千克|g|克|颗|粒|pcs|pieces)?$/i.test(token));
+    if (amountIndex < 0) {
+      errors.push(`第 ${index + 1} 行没有识别到补豆数量`);
+      return;
+    }
+
+    const lookup = tokens.slice(0, amountIndex).join("");
+    const color = findColorByText(lookup);
+    if (!color) {
+      errors.push(`第 ${index + 1} 行找不到颜色：${lookup || clean}`);
+      return;
+    }
+
+    const amount = parseStockValue(tokens[amountIndex]);
+    if (amount <= 0) {
+      errors.push(`第 ${index + 1} 行补豆数量必须大于 0`);
+      return;
+    }
+
+    records.push({ color, amount });
+  });
+  return { records, errors };
+}
+
 function findColorByText(value) {
   const lookup = normalizeLookup(value);
   if (!lookup) return null;
@@ -1216,6 +1256,35 @@ if (els.batchConsumeColor && els.batchConsumeDialog && els.batchConsumeForm) {
     els.batchConsumeDialog.close();
     render();
     alert(`已批量记录 ${records.length} 条消耗。`);
+  });
+}
+
+if (els.batchRestockColor && els.batchRestockDialog && els.batchRestockForm) {
+  els.batchRestockColor.addEventListener("click", () => {
+    els.batchRestockText.value = "";
+    els.batchRestockDialog.showModal();
+  });
+
+  els.closeBatchRestock.addEventListener("click", () => els.batchRestockDialog.close());
+
+  els.batchRestockForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const { records, errors } = parseBatchRestock(els.batchRestockText.value);
+    if (errors.length) {
+      alert(errors.slice(0, 6).join("\n"));
+      return;
+    }
+    if (!records.length) {
+      alert("没有识别到补豆数据。请按：颜色编号/名称、数量 的格式输入。");
+      return;
+    }
+
+    records.forEach(({ color, amount }) => {
+      color.stock = Number(color.stock || 0) + amount;
+    });
+    els.batchRestockDialog.close();
+    render();
+    alert(`已批量增加 ${records.length} 个颜色的库存。`);
   });
 }
 

@@ -167,6 +167,7 @@
               <div class="head-actions">
                 <button class="ghost-button" id="consumeColor">记录消耗</button>
                 <button class="ghost-button" id="batchConsumeColor">批量消耗</button>
+                <button class="ghost-button" id="batchRestockColor">批量补豆</button>
               </div>
             </div>
             <div class="color-list" id="colorList"></div>
@@ -337,6 +338,19 @@
         <menu>
           <button type="button" value="cancel" class="ghost" id="closeBatchConsume">取消</button>
           <button type="submit" value="default">批量保存</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="batchRestockDialog">
+      <form class="dialog-card import-dialog-card" id="batchRestockForm">
+        <h3>批量增加拼豆库存</h3>
+        <p>每行一条补豆记录。支持：颜色编号/颜色名称、增加数量。数量可写“1000”或“10g”。</p>
+        <textarea id="batchRestockText" placeholder="A1, 1000&#10;A2, 10g&#10;奶油白, 800"></textarea>
+        <small>颜色会按编号或名称自动匹配库存表，保存后会一次性增加库存。</small>
+        <menu>
+          <button type="button" value="cancel" class="ghost" id="closeBatchRestock">取消</button>
+          <button type="submit" value="default">批量补豆</button>
         </menu>
       </form>
     </dialog>

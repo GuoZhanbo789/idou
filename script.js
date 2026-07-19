@@ -1,7 +1,8 @@
 const currency = new Intl.NumberFormat("zh-CN", {
   style: "currency",
   currency: "CNY",
-  maximumFractionDigits: 0,
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
 });
 
 const today = new Date().toISOString().slice(0, 10);

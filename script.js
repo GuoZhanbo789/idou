@@ -5,7 +5,7 @@ const currency = new Intl.NumberFormat("zh-CN", {
   maximumFractionDigits: 2,
 });
 
-const today = new Date().toISOString().slice(0, 10);
+let today = getTodayDate();
 
 const SUPABASE_URL = "https://uazlxbjveudparqqkhxn.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_EBF9jUq9jqg7dGrnu3ftDQ_33nXUgow";
@@ -20,6 +20,12 @@ const supabaseReady = SUPABASE_URL.startsWith("https://")
   && (SUPABASE_ANON_KEY.startsWith("ey") || SUPABASE_ANON_KEY.startsWith("sb_publishable_"))
   && window.supabase;
 const supabaseClient = supabaseReady ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
+function getTodayDate() {
+  const now = new Date();
+  const localTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  return localTime.toISOString().slice(0, 10);
+}
 
 const defaults = {
   works: [
@@ -162,10 +168,34 @@ let loadingCloud = false;
 let cloudSaveTimer = null;
 let lastCloudError = "";
 let productSortOrderReady = true;
-els.ledgerDate.value = today;
-els.summaryDay.value = today;
-els.summaryMonth.value = today.slice(0, 7);
-els.summaryYear.value = new Date().getFullYear();
+syncTodayFields(true);
+
+function syncTodayFields(force = false) {
+  const previousToday = today;
+  today = getTodayDate();
+  const previousMonth = previousToday.slice(0, 7);
+  const currentMonth = today.slice(0, 7);
+  const previousYear = previousToday.slice(0, 4);
+  const currentYear = today.slice(0, 4);
+
+  if (els.ledgerDate && (force || !els.ledgerDate.value || els.ledgerDate.value === previousToday)) {
+    els.ledgerDate.value = today;
+  }
+  if (els.summaryDay && (force || !els.summaryDay.value || els.summaryDay.value === previousToday)) {
+    els.summaryDay.value = today;
+  }
+  if (els.batchConsumeDate && (force || !els.batchConsumeDate.value || els.batchConsumeDate.value === previousToday)) {
+    els.batchConsumeDate.value = today;
+  }
+  if (els.summaryMonth && (force || !els.summaryMonth.value || els.summaryMonth.value === previousMonth)) {
+    els.summaryMonth.value = currentMonth;
+  }
+  if (els.summaryYear && (force || !els.summaryYear.value || String(els.summaryYear.value) === previousYear)) {
+    els.summaryYear.value = currentYear;
+  }
+
+  return previousToday !== today;
+}
 
 const revealObserver = new IntersectionObserver((entries) => {
   entries.forEach((entry) => {
@@ -1213,12 +1243,14 @@ document.querySelector("#addWork").addEventListener("click", () => {
 });
 
 document.querySelector("#consumeColor").addEventListener("click", () => {
+  syncTodayFields();
   editContext = { kind: "consume" };
   openEditor("consume", {});
 });
 
 if (els.batchConsumeColor && els.batchConsumeDialog && els.batchConsumeForm) {
   els.batchConsumeColor.addEventListener("click", () => {
+    syncTodayFields();
     els.batchConsumeProject.value = "";
     els.batchConsumeDate.value = today;
     els.batchConsumeText.value = "";
@@ -1474,6 +1506,7 @@ els.closeDialog.addEventListener("click", () => els.dialog.close());
 
 els.ledgerForm.addEventListener("submit", (event) => {
   event.preventDefault();
+  syncTodayFields();
   const name = document.querySelector("#ledgerName").value.trim();
   const amount = Number(document.querySelector("#ledgerAmount").value);
   const date = document.querySelector("#ledgerDate").value || today;
@@ -1485,6 +1518,18 @@ els.ledgerForm.addEventListener("submit", (event) => {
   els.ledgerDate.value = today;
   render();
 });
+
+window.addEventListener("focus", () => {
+  if (syncTodayFields()) render();
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && syncTodayFields()) render();
+});
+
+setInterval(() => {
+  if (syncTodayFields()) render();
+}, 60000);
 
 els.ledgerFilterType?.addEventListener("change", renderLedger);
 els.ledgerFilterDate?.addEventListener("change", renderLedger);
